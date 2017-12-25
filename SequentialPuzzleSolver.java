@@ -2,8 +2,6 @@ import jdk.nashorn.internal.ir.annotations.Immutable;
 
 import java.util.*;
 
-import static jdk.nashorn.internal.objects.Global.print;
-
 public class SequentialPuzzleSolver<P, M> {
     private final Puzzle<P, M> puzzle;
     private final Set<P> seen = new HashSet<P>();
