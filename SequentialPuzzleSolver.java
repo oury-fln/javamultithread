@@ -7,6 +7,8 @@ import static jdk.nashorn.internal.objects.Global.print;
 public class SequentialPuzzleSolver<P, M> {
     private final Puzzle<P, M> puzzle;
     private final Set<P> seen = new HashSet<P>();
+    private List<M> result = null;
+    Object lock = new Object();
 
     public SequentialPuzzleSolver(Puzzle<P, M> puzzle) {
         this.puzzle = puzzle;
@@ -14,7 +16,16 @@ public class SequentialPuzzleSolver<P, M> {
 
     public List<M> solve() {
         P pos = puzzle.initialPosition();
-        return search(new PuzzleNode<P, M>(pos, null, null));
+        //return search(new PuzzleNode<P, M>(pos, null, null));
+        synchronized (lock) {
+            new Thread(new Task(new PuzzleNode<P, M>(pos, null, null))).start();
+            try {
+                lock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
     }
 
 
@@ -26,26 +37,25 @@ public class SequentialPuzzleSolver<P, M> {
         }
         @Override
         public void run() {
-            if (!seen.contains(node.pos)) {
-                seen.add(node.pos);
-                if (puzzle.isGoal(node.pos))
-                    //return node.asMoveList();
-                for (M move : puzzle.legalMoves(node.pos)) {
-                    P pos = puzzle.move(node.pos, move);
-
-                /*/
-                System.out.print(node.pos.toString());
-                System.out.print(" ");
-                System.out.println(pos.toString());
-                //*/
-
-                    PuzzleNode<P, M> child = new PuzzleNode<P, M>(pos, move, node);
-                    List<M> result = search(child);
-                    if (result != null)
-                        //return result;
-                }
+            synchronized(lock) {
+                if (!seen.contains(node.pos) && result == null)
+                    seen.add(node.pos);
+                else
+                    return;
             }
-            //
+            if (puzzle.isGoal(node.pos)) {
+                synchronized (lock) {
+                    result = node.asMoveList();
+                    lock.notify();
+                }
+                return;
+            }
+            for (M move : puzzle.legalMoves(node.pos)) {
+                P pos = puzzle.move(node.pos, move);
+
+                PuzzleNode<P, M> child = new PuzzleNode<P, M>(pos, move, node);
+                new Thread(new Task(child)).start();
+            }
         }
     }
 
