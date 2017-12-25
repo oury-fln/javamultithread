@@ -7,4 +7,8 @@ public class Point1 {
     }
     public boolean isGoal() { return isGoal; }
     public int getPosition() { return position; }
+    @Override
+    public String toString() {
+        return Integer.toString(position);
+    }
 }
